@@ -1,28 +1,44 @@
 #!/bin/bash
 
-logpath=/var/log/boxsync
-boxdavlocation=/mnt/box-dav
-boxdest=/mnt/box
+ # Define globals
+ logpath=/var/log/boxsync
+ boxdavlocation=/mnt/box-dav
+ boxdest=/mnt/box
+ boxsyncdirs=('Audio Books' 'Classical' 'Country' 'Electronic' 'Metal' 'Pop' 'R&B' 'Rock' 'Soundtracks' 'Vocal' 'World')
 
-writelog() {
-    while IFS= read -r line; do
-        printf "%s boxsync: %s\n" "$(date +'%F %H:%M:%S')" "$line" >> $logpath
-    done
-}
+ # Define functions
+ writelog() {
+     while IFS= read -r line; do
+         printf "%s boxsync: %s\n" "$(date +'%F %H:%M:%S')" "$line" >> $logpath
+     done
+ }
 
-# Mount Box location
-/bin/mount -t davfs https://dav.box.com/dav $boxdavlocation
-echo "Mount box-dav at $boxdavlocation" | writelog
+ # Set $IFS
+ IFSORIG=$IFS
+ IFS=$(echo -en "\n\b")
 
-# Begin rsync
-# -u update
-# -r recursive
-# --progress show progress
-# --delete delete files not in source
-echo "Starting sync" | writelog
-/bin/rsync -urh --progress --delete --exclude 'Podcasts' --exclude 'Playlists' $boxdavlocation/* $boxdest | writelog
-/bin/rsync -rh --progress --delete --temp-dir=/tmp $boxdest/Playlists/ $boxdavlocation/Playlists | writelog
+ # Mount Box location
+ /bin/mount -t davfs https://dav.box.com/dav $boxdavlocation
+ echo "Mount box-dav at $boxdavlocation" | writelog
 
-# Unmount Box location
-echo "Unmount box-dav at $boxdavlocation" | writelog
-/bin/umount $boxdavlocation
+ # Begin rsync for each directory in boxsyncdirs
+ # -u update
+ # -r recursive
+ # --progress show progress
+ # --delete delete files not in source
+ echo "Starting sync" | writelog
+
+ for i in ${boxsyncdirs[@]}; do
+     echo "Syncing directory $i" | writelog
+     /bin/rsync -urh --progress --delete $boxdavlocation/$i  $boxdest/$i | writelog
+ done
+
+ # Sync playlists back to Box
+ /bin/rsync -rh --progress --delete --temp-dir=/tmp $boxdest/Playlists/ $boxdavlocation/Playlists | writelog
+
+ # Unmount Box location
+ echo "Unmount box-dav at $boxdavlocation" | writelog
+ /bin/umount $boxdavlocation
+
+ # Restore IFS
+ IFS=$IFSORIG
