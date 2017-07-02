@@ -30,7 +30,7 @@
 
  for i in ${boxsyncdirs[@]}; do
      echo "Syncing directory $i" | writelog
-     /bin/rsync -urh --progress --delete $boxdavlocation/$i  $boxdest/$i | writelog
+     /bin/rsync -urh --progress --delete $boxdavlocation/$i  $boxdest | writelog
  done
 
  # Sync playlists back to Box
